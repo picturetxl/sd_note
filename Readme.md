@@ -1,3 +1,18 @@
+# 框架协议 Outline Agreements
+
+
+
+> 框架协议是指与某一供货商签订的长期采购协议，供应商按某些特定条件提供物料或服务，要求在一定时间内提供一定数量或一定金额的货物或服务。
+
++ 计划协议 Schedule agreement
++ 合同 Contract
+
+
+
+区别: 合同当中并没有包括具体的交货时间和交货数量，这些信息需要在后续订单中(Release Order)体现。
+
+
+
 
 
 
@@ -9,6 +24,12 @@
 
 
 信用管控要求: 即便有信贷额度,但是该客户出现拖欠情况,则可以创建销售订单,但不能交货保存
+
+
+
+复制传输 在测试机输入事物代码`SCC1`
+
+
 
 
 
@@ -345,11 +366,11 @@ D:自动信贷控制
 
 ![image-20200318162425964](Readme.assets/image-20200318162425964.png)
 
+![image-20200319095745218](Readme.assets/image-20200319095745218.png)
 
 
 
-
-
+> 定义交货触发信贷检查
 
 
 
@@ -408,4 +429,215 @@ CG:信贷组
 + 最大未清项%
 + 未清项目天数
 + 显示信用分析者
-+ 
+
+
+
+
+
+## 错误
+
+
+
+
+
+### 修改销售订单时,条目 T001 A 不存在T691A内－请检查输入  消息号 00058
+
+
+
+![image-20200319092321008](Readme.assets/image-20200319092321008.png)
+
+
+
+----
+
+
+
+到se16n下查看这个表T691A(信用管理风险类别)
+
+没有定义A
+
+![image-20200319092522297](Readme.assets/image-20200319092522297.png)
+
+> 最好将每个风险类全部定义一遍 和你的信用控制范围关联起来
+
+
+
+# ABAP
+
+
+
+## 问题清单以及解决
+
+### 添加按钮用于销售订单导入模板的下载
+
+![image-20200413125647201](Readme.assets/image-20200413125647201.png)
+
+
+
+1. 首先要将模板上传 SMW0
+
+![image-20200413125828902](Readme.assets/image-20200413125828902.png)
+
+![image-20200413125849295](Readme.assets/image-20200413125849295.png)
+
+
+
+![image-20200413125900354](Readme.assets/image-20200413125900354.png)
+
+
+
+创建时,会自己指定文档的id,这个id被程序所用
+
+![image-20200413125928346](Readme.assets/image-20200413125928346.png)
+
+
+
+
+
+```abap
+*&---------------------------------------------------------------------*
+*& Report ZTL_TEST
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZTL_TEST.
+
+
+TYPE-POOLS icon.
+TABLES sscrfields. " 选择屏幕上的字段
+DATA functxt TYPE smp_dyntxt.
+  DATA L_FILENAME TYPE STRING.
+  DATA L_FULLPATH TYPE STRING.
+  DATA L_ACTION TYPE I.
+  DATA P_PATH TYPE LOCALFILE VALUE'C:\'.
+    DATA    G_EXCEL_ID   TYPE W3OBJID VALUE 'ZSDXSDDMB'.
+
+    DATA: G_SHEET_NAME TYPE CHAR20 VALUE '凭证抬头'.
+    DATA I_DATA LIKE ZCRS_EXCEL OCCURS 0 WITH HEADER LINE.
+
+PARAMETERS: p_carrid TYPE s_carr_id,
+            p_cityfr TYPE s_from_cit.
+SELECTION-SCREEN: FUNCTION KEY 1,
+                  FUNCTION KEY 2.
+
+INITIALIZATION.
+  functxt-icon_id   = ICON_EXPORT."指定按钮的功能:输出
+  functxt-icon_text = '销售订单导入模板'.
+  sscrfields-functxt_01 = functxt.
+
+
+AT SELECTION-SCREEN.
+  CASE sscrfields-ucomm.
+    WHEN 'FC01'.
+       PERFORM SEARCH_HELP_PATH."下载 模板
+       PERFORM DOWNLOAD_EXCEL.
+  ENDCASE.
+
+
+  FORM SEARCH_HELP_PATH .
+  DATA: L_PATH TYPE STRING .
+
+  L_FILENAME = '凭证模板'.
+  CALL METHOD CL_GUI_FRONTEND_SERVICES=>FILE_SAVE_DIALOG
+    EXPORTING
+      WINDOW_TITLE         = '请选择保存路径'
+      DEFAULT_FILE_NAME    = L_FILENAME
+      DEFAULT_EXTENSION    = 'XLS'
+      INITIAL_DIRECTORY    = 'C:\'
+    CHANGING
+      FILENAME             = L_FILENAME
+      PATH                 = L_PATH
+      FULLPATH             = L_FULLPATH
+      USER_ACTION          = L_ACTION
+    EXCEPTIONS
+      CNTL_ERROR           = 1
+      ERROR_NO_GUI         = 2
+      NOT_SUPPORTED_BY_GUI = 3
+      OTHERS               = 4.
+
+  IF SY-SUBRC <> 0.
+    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+               WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+  P_PATH = L_PATH.
+
+ENDFORM.
+
+FORM DOWNLOAD_EXCEL .
+  DATA: L_EXCEL_FNAME TYPE CHAR20,
+        L_EMSG        TYPE CHAR100.
+  REPLACE ALL OCCURRENCES OF  '.XLS' IN L_FILENAME WITH ' '.
+  CONDENSE L_FILENAME NO-GAPS.
+  L_EXCEL_FNAME = L_FILENAME.
+
+  IF  L_ACTION = 0.
+    CALL FUNCTION 'ZDOWNLOAD_TO_TEMP'
+      EXPORTING
+        SHEET_NAME  = G_SHEET_NAME  "Excel sheet名称
+        EXCEL_ID    = G_EXCEL_ID    "Excel ID in SAP
+        PATH        = P_PATH        "Path
+        EXCEL_FNAME = L_EXCEL_FNAME "Excel file name
+        SHOW_EXCEL  = 'X'           "是否显示EXCEL
+      IMPORTING
+        E_MESSAGE   = L_EMSG        "返回错误日志
+      TABLES
+        I_DATA      = I_DATA        "数据内容
+      EXCEPTIONS
+        EXCEL_ERROR = 1
+        OTHERS      = 2.
+    IF SY-SUBRC <> 0.  ENDIF.
+  ENDIF.
+ENDFORM.
+```
+
+
+
+### COBRB 表结算类型PERBZ 文本不一致现象
+
+> 需要转一下 PERBZ的语言相关的转换
+
+```abap
+  CALL FUNCTION 'CONVERSION_EXIT_PERBZ_OUTPUT'
+      EXPORTING
+        INPUT         = gt_pm005-perbz
+    IMPORTING
+      OUTPUT        = gt_pm005-perbz
+              .
+```
+
+> 注意 : 如果PERBZ 作为选择屏幕或者select的条件时 是不需要转的
+
+
+
+
+
+
+
+
+
+
+
+# HANA STDIO
+
+
+
+
+
+## 连接 登陆
+
+![image-20200413092647140](Readme.assets/image-20200413092647140.png)
+
+
+
+
+
+![image-20200413092701115](Readme.assets/image-20200413092701115.png)
+
+![image-20200413092719855](Readme.assets/image-20200413092719855.png)
+
+![image-20200413092749095](Readme.assets/image-20200413092749095.png)
+
+
+
+
+
