@@ -1,3 +1,15 @@
+
+
+# 事物代码
+
+| code | Describe          | ECC  | S4   |
+| ---- | ----------------- | ---- | ---- |
+| SCC1 | 100->300 复制配置 |      |      |
+| OB52 | 账期              |      |      |
+| MMBE | 库存              |      |      |
+
+
+
 # 框架协议 Outline Agreements
 
 
@@ -511,11 +523,99 @@ CG:信贷组
 
 
 
+## Range
+
+此时G_ranges就相当于SELECTION-OPTION定义的类型。
+
+*选项介绍：
+
+*1.SIGN 值为 I 和 E 。 I是包含， E是排除， 一般使用I。
+
+*2.OPTION 如果HIGH 为空 ，为单值选择 。有 EQ、NE、GT、LE、LT等逻辑操作  对于*的 CP包含  NP是排除
+
+\*         如果HIGH 不为空 为区间选择 有BT,NB可选
+
+*3.LOW   低值
+
+*4.HIGH  高值
+
+
+
+## Message
+
+Information message （弹出一个对话框）I
+
+success message （左下角显示一个成功的提示框）S
+
+warning message （左下角显示一个黄色叹号警告消息）W
+
+error message（左下角显示红色谈好错误提示信息）E
+
+ 
+
+ 
+
+写法1:局部
+
+ 
+
+*声明一个变量
+
+DATA: gv_message(20) TYPE c VALUE 'message'.
+
+*I类型的message
+
+MESSAGE gv_message TYPE 'I'.
+
+ 
+
+ 
+
+写法2:全局的
+
+ 
+
+定义一个消息类
+
+*先创建message class
+
+*调用 MESSAGE 类型+编号(message class).
+
+MESSAGE i000(Z_CURRY_2019)."i类型
+
+MESSAGE s000(Z_CURRY_2019)."s类型
+
+MESSAGE w000(Z_CURRY_2019)."w类型
+
+MESSAGE e000(Z_CURRY_2019)."e类型
 
 
 
 
 
+![2](Readme.assets/clip_image001.png)
+
+
+
+
+
+
+
+# BW
+
+## 安装
+
+首先sap官方要求eclipse是2019-06
+
+https://tools.hana.ondemand.com/
+
+其次还需要外网下载jar包 放在eclipse目录下的dropins目录下
+
+ 
+
+ 
+
+![1](Readme.assets/clip_image001-1587097514791.png)
 
 
 
